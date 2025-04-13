@@ -44,9 +44,7 @@ func NewNode(word string, weight int, neighbours ...*Node) *Node {
 		Weight:    weight,
 	}
 
-	for i := range len(neighbours) {
-		newNode.Neigbours[i] = neighbours[i]
-	}
+	copy(newNode.Neigbours, neighbours)
 
 	return newNode
 }

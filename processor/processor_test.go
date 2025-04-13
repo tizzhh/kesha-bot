@@ -11,7 +11,7 @@ func TestProcessor(t *testing.T) {
 		graph := NewGraph()
 		expectedStartNeighbours := 0
 
-		assert.Equal(t, expectedStartNeighbours, len(graph.Start.Neigbours))
+		assert.Len(t, graph.Start.Neigbours, expectedStartNeighbours)
 	})
 
 	t.Run("it adds one word message to graph", func(t *testing.T) {
@@ -26,7 +26,7 @@ func TestProcessor(t *testing.T) {
 
 		graph.AddMsg(expectedWord)
 
-		assert.Equal(t, expectedStartNeighbours, len(graph.Start.Neigbours))
+		assert.Len(t, graph.Start.Neigbours, expectedStartNeighbours)
 		assert.Equal(t, expectedNode, graph.Start.Neigbours[0])
 		assert.Equal(t, expectedMap, graph.Nodes)
 	})
