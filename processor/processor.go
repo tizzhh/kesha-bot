@@ -3,7 +3,6 @@ package processor
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"slices"
 	"strings"
 )
@@ -22,11 +21,9 @@ type Graph struct {
 	logger *slog.Logger
 }
 
-func NewGraph() *Graph {
+func NewGraph(logger *slog.Logger) *Graph {
 	start := &Node{}
 	end := &Node{}
-
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	return &Graph{
 		Nodes: map[string]*Node{},
@@ -58,13 +55,7 @@ func (g *Graph) AddMsg(msg string) {
 	prevNode := g.Start
 
 	for _, token := range tokens {
-		_, exists := g.Nodes[token]
-		if !exists {
-			newNode := NewNode(token, 0)
-			g.Nodes[token] = newNode
-		}
-
-		node := g.Nodes[token]
+		node := g.GetOrCreateNode(token)
 
 		prevNode.AddNeighbour(node)
 		prevNode = node
@@ -74,6 +65,16 @@ func (g *Graph) AddMsg(msg string) {
 
 	lastNode := g.Nodes[tokens[len(tokens)-1]]
 	lastNode.AddNeighbour(g.End)
+}
+
+func (g *Graph) GetOrCreateNode(token string) *Node {
+	_, exists := g.Nodes[token]
+	if !exists {
+		newNode := NewNode(token, 0)
+		g.Nodes[token] = newNode
+	}
+
+	return g.Nodes[token]
 }
 
 func (n *Node) AddNeighbour(node *Node) {
