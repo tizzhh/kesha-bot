@@ -24,7 +24,7 @@ func TestProcessor(t *testing.T) {
 			expectedWord: expectedNode,
 		}
 
-		graph.Add(expectedWord)
+		graph.AddMsg(expectedWord)
 
 		assert.Equal(t, expectedStartNeighbours, len(graph.Start.Neigbours))
 		assert.Equal(t, expectedNode, graph.Start.Neigbours[0])
@@ -53,7 +53,7 @@ func TestProcessor(t *testing.T) {
 			Nodes: expctedMap,
 		}
 
-		graph.Add(msg)
+		graph.AddMsg(msg)
 
 		assert.Equal(t, expectedGraph.Start, graph.Start)
 		assert.Equal(t, expectedGraph.Nodes, graph.Nodes)

@@ -51,17 +51,15 @@ func NewNode(word string, weight int, neighbours ...*Node) *Node {
 	return newNode
 }
 
-func (g *Graph) Add(msg string) {
+func (g *Graph) AddMsg(msg string) {
 	tokens := strings.Fields(msg)
 	if len(tokens) == 0 {
 		g.logger.Warn(fmt.Sprintf("[graph] empty msg %q in Add", msg))
 	}
-	g.logger.Debug(fmt.Sprintf("[graph] tokens: %v", tokens))
 
-	lastNode := g.Start
+	prevNode := g.Start
 
-	for i, token := range tokens {
-		g.logger.Debug(fmt.Sprintf("[graph] token: %q", token))
+	for _, token := range tokens {
 		_, exists := g.Nodes[token]
 		if !exists {
 			newNode := NewNode(token, 0)
@@ -70,24 +68,17 @@ func (g *Graph) Add(msg string) {
 
 		node := g.Nodes[token]
 
-		lastNode.AddNeightbour(node)
-		lastNode = node
-
-		if i == len(tokens)-1 {
-			g.AddEndMsg(node)
-		}
+		prevNode.AddNeighbour(node)
+		prevNode = node
 
 		g.Nodes[token].Weight++
 	}
+
+	lastNode := g.Nodes[tokens[len(tokens)-1]]
+	lastNode.AddNeighbour(g.End)
 }
 
-func (g *Graph) AddEndMsg(node *Node) {
-	if !slices.Contains(node.Neigbours, g.End) {
-		node.Neigbours = append(node.Neigbours, g.End)
-	}
-}
-
-func (n *Node) AddNeightbour(node *Node) {
+func (n *Node) AddNeighbour(node *Node) {
 	if !slices.Contains(n.Neigbours, node) {
 		n.Neigbours = append(n.Neigbours, node)
 	}
