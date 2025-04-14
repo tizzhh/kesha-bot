@@ -1,16 +1,18 @@
 package processor
 
 import (
-	"log/slog"
+	"io"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	dummyLogger = slog.New(slog.DiscardHandler)
+	dummyLogger = log.New(io.Discard, "", 0)
 )
 
+//nolint:gocognit
 func TestProcessor(t *testing.T) {
 	t.Run("it creates correct processor with start and end", func(t *testing.T) {
 		processor := NewProcessor(dummyLogger)
@@ -43,7 +45,7 @@ func TestProcessor(t *testing.T) {
 		processor.AddMsg(msg)
 
 		node1 := NewNode("hello,", 1)
-		start := NewNode("", 0, node1)
+		start := NewNode("", 1, node1)
 		node2 := NewNode("are", 1)
 		node3 := NewNode("you", 1, processor.End)
 		node1.AddNeighbour(node2)
@@ -72,7 +74,7 @@ func TestProcessor(t *testing.T) {
 		processor.AddMsg(msg2)
 
 		node1 := NewNode("hello,", 1)
-		start := NewNode("", 0, node1)
+		start := NewNode("", 1, node1)
 		node2 := NewNode("are", 2)
 		node3 := NewNode("you", 2, processor.End)
 		node1.AddNeighbour(node2)
@@ -94,5 +96,75 @@ func TestProcessor(t *testing.T) {
 
 		assert.Equal(t, expectedprocessor.Start, processor.Start)
 		assert.Equal(t, expectedprocessor.Nodes, processor.Nodes)
+	})
+
+	t.Run("it generates new messages correctly", func(t *testing.T) {
+		const (
+			helloHowAreYou = "hello, how are you?"
+			hiHowAreYou    = "hi, how are you?"
+
+			numberOfGenerations = 10_000
+			allowedDelta        = 2
+		)
+
+		tCases := []struct {
+			Name                   string
+			Msgs                   []string
+			ExpectedMsgPercentages map[string]float64
+		}{
+			{
+				Name: "one message",
+				Msgs: []string{helloHowAreYou},
+				ExpectedMsgPercentages: map[string]float64{
+					helloHowAreYou: 100,
+				},
+			},
+			{
+				Name: "two messages",
+				Msgs: []string{helloHowAreYou, hiHowAreYou},
+				ExpectedMsgPercentages: map[string]float64{
+					helloHowAreYou: 50,
+					hiHowAreYou:    50,
+				},
+			},
+			{
+				Name: "three messages",
+				Msgs: []string{helloHowAreYou, helloHowAreYou, hiHowAreYou},
+				ExpectedMsgPercentages: map[string]float64{
+					helloHowAreYou: 66,
+					hiHowAreYou:    33,
+				},
+			},
+		}
+
+		for _, tCase := range tCases {
+			t.Run(tCase.Name, func(t *testing.T) {
+				processor := NewProcessor(dummyLogger)
+
+				for _, msg := range tCase.Msgs {
+					processor.AddMsg(msg)
+				}
+
+				gotMsgCalls := map[string]int{}
+				for range numberOfGenerations {
+					newMsg := processor.Generate()
+					gotMsgCalls[newMsg]++
+				}
+
+				totalNumberOfCalls := 0
+				for _, calls := range gotMsgCalls {
+					totalNumberOfCalls += calls
+				}
+
+				gotMsgPercentages := map[string]float64{}
+				for msg, calls := range gotMsgCalls {
+					gotMsgPercentages[msg] = (float64(calls) / float64(totalNumberOfCalls)) * 100
+				}
+
+				for msg, percentage := range tCase.ExpectedMsgPercentages {
+					assert.InDelta(t, percentage, gotMsgPercentages[msg], allowedDelta)
+				}
+			})
+		}
 	})
 }
