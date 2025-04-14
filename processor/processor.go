@@ -3,17 +3,16 @@ package processor
 import (
 	"fmt"
 	"log/slog"
-	"slices"
 	"strings"
 )
 
 type Node struct {
 	Word      string
 	Weight    int
-	Neigbours []*Node
+	Neigbours map[string]*Node
 }
 
-type Graph struct {
+type Processor struct {
 	Nodes map[string]*Node
 	Start *Node
 	End   *Node
@@ -21,11 +20,11 @@ type Graph struct {
 	logger *slog.Logger
 }
 
-func NewGraph(logger *slog.Logger) *Graph {
-	start := &Node{}
-	end := &Node{}
+func NewProcessor(logger *slog.Logger) *Processor {
+	start := NewNode("", 0)
+	end := NewNode("", 0)
 
-	return &Graph{
+	return &Processor{
 		Nodes: map[string]*Node{},
 		Start: start,
 		End:   end,
@@ -37,19 +36,21 @@ func NewGraph(logger *slog.Logger) *Graph {
 func NewNode(word string, weight int, neighbours ...*Node) *Node {
 	newNode := &Node{
 		Word:      word,
-		Neigbours: make([]*Node, len(neighbours)),
+		Neigbours: map[string]*Node{},
 		Weight:    weight,
 	}
 
-	copy(newNode.Neigbours, neighbours)
+	for _, v := range neighbours {
+		newNode.Neigbours[v.Word] = v
+	}
 
 	return newNode
 }
 
-func (g *Graph) AddMsg(msg string) {
+func (g *Processor) AddMsg(msg string) {
 	tokens := strings.Fields(msg)
 	if len(tokens) == 0 {
-		g.logger.Warn(fmt.Sprintf("[graph] empty msg %q in Add", msg))
+		g.logger.Warn(fmt.Sprintf("[processor] empty msg %q in Add", msg))
 	}
 
 	prevNode := g.Start
@@ -67,7 +68,7 @@ func (g *Graph) AddMsg(msg string) {
 	lastNode.AddNeighbour(g.End)
 }
 
-func (g *Graph) GetOrCreateNode(token string) *Node {
+func (g *Processor) GetOrCreateNode(token string) *Node {
 	_, exists := g.Nodes[token]
 	if !exists {
 		newNode := NewNode(token, 0)
@@ -78,8 +79,8 @@ func (g *Graph) GetOrCreateNode(token string) *Node {
 }
 
 func (n *Node) AddNeighbour(node *Node) {
-	if !slices.Contains(n.Neigbours, node) {
-		n.Neigbours = append(n.Neigbours, node)
+	if _, exists := n.Neigbours[node.Word]; !exists {
+		n.Neigbours[node.Word] = node
 	}
 }
 
