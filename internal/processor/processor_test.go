@@ -1,28 +1,53 @@
 package processor
 
 import (
-	"io"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	dummyLogger = log.New(io.Discard, "", 0)
-)
-
 //nolint:gocognit
 func TestProcessor(t *testing.T) {
 	t.Run("it creates correct processor with start and end", func(t *testing.T) {
-		processor := NewProcessor(dummyLogger)
+		processor := NewProcessor()
 		expectedStartNeighbours := 0
 
 		assert.Len(t, processor.Start.Neigbours, expectedStartNeighbours)
 	})
 
+	t.Run("it returns corect errors in AddMsg", func(t *testing.T) {
+		tCases := []struct {
+			Name        string
+			Msg         string
+			ExpectedErr string
+		}{
+			{
+				Name:        "empty msg",
+				ExpectedErr: ErrEmptyMessage.Error(),
+			},
+			{
+				Name: "non-empty msg",
+				Msg:  "aboba",
+			},
+		}
+
+		for _, tCase := range tCases {
+			t.Run(tCase.Name, func(t *testing.T) {
+				processor := NewProcessor()
+
+				err := processor.AddMsg(tCase.Msg)
+
+				if tCase.ExpectedErr != "" {
+					assert.ErrorContains(t, err, tCase.ExpectedErr)
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		}
+	})
+
 	t.Run("it adds one word message to processor", func(t *testing.T) {
-		processor := NewProcessor(dummyLogger)
+		processor := NewProcessor()
 
 		expectedStartNeighbours := 1
 		expectedWord := "aboba"
@@ -39,7 +64,7 @@ func TestProcessor(t *testing.T) {
 	})
 
 	t.Run("it creates correct processor with a provided message", func(t *testing.T) {
-		processor := NewProcessor(dummyLogger)
+		processor := NewProcessor()
 
 		msg := "hello, are you"
 		processor.AddMsg(msg)
@@ -56,17 +81,18 @@ func TestProcessor(t *testing.T) {
 			"are":    node2,
 			"you":    node3,
 		}
+
 		expectedprocessor := &Processor{
-			Start: start,
 			Nodes: expctedMap,
+			Start: start,
+			End:   NewNode("", 1),
 		}
 
-		assert.Equal(t, expectedprocessor.Start, processor.Start)
-		assert.Equal(t, expectedprocessor.Nodes, processor.Nodes)
+		assert.Equal(t, expectedprocessor, processor)
 	})
 
 	t.Run("it creates correct processor with 2 colliding messages", func(t *testing.T) {
-		processor := NewProcessor(dummyLogger)
+		processor := NewProcessor()
 
 		msg1 := "hello, are you"
 		processor.AddMsg(msg1)
@@ -90,12 +116,47 @@ func TestProcessor(t *testing.T) {
 			"privet,": node4,
 		}
 		expectedprocessor := &Processor{
-			Start: start,
 			Nodes: expctedMap,
+			Start: start,
+			End:   NewNode("", 1),
 		}
 
-		assert.Equal(t, expectedprocessor.Start, processor.Start)
-		assert.Equal(t, expectedprocessor.Nodes, processor.Nodes)
+		assert.Equal(t, expectedprocessor, processor)
+	})
+
+	t.Run("it returns corect errors in Generate", func(t *testing.T) {
+		tCases := []struct {
+			Name        string
+			Msg         string
+			ExpectedErr string
+		}{
+			{
+				Name:        "empty msg",
+				ExpectedErr: ErrNoNeighbours.Error(),
+			},
+			{
+				Name: "non-empty msg",
+				Msg:  "aboba",
+			},
+		}
+
+		for _, tCase := range tCases {
+			t.Run(tCase.Name, func(t *testing.T) {
+				processor := NewProcessor()
+
+				if tCase.Msg != "" {
+					processor.AddMsg(tCase.Msg)
+				}
+
+				_, err := processor.Generate()
+
+				if tCase.ExpectedErr != "" {
+					assert.ErrorContains(t, err, tCase.ExpectedErr)
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		}
 	})
 
 	t.Run("it generates new messages correctly", func(t *testing.T) {
@@ -139,7 +200,7 @@ func TestProcessor(t *testing.T) {
 
 		for _, tCase := range tCases {
 			t.Run(tCase.Name, func(t *testing.T) {
-				processor := NewProcessor(dummyLogger)
+				processor := NewProcessor()
 
 				for _, msg := range tCase.Msgs {
 					processor.AddMsg(msg)
@@ -147,7 +208,7 @@ func TestProcessor(t *testing.T) {
 
 				gotMsgCalls := map[string]int{}
 				for range numberOfGenerations {
-					newMsg := processor.Generate()
+					newMsg, _ := processor.Generate()
 					gotMsgCalls[newMsg]++
 				}
 

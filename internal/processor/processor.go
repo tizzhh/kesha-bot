@@ -1,10 +1,16 @@
 package processor
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"strings"
+)
+
+var (
+	ErrEmptyMessage   = errors.New("empty message")
+	ErrNoNeighbours   = errors.New("node has no neighbours")
+	ErrRandomWalkFail = errors.New("failed to get a random neighbour")
 )
 
 type Node struct {
@@ -17,11 +23,9 @@ type Processor struct {
 	Nodes map[string]*Node
 	Start *Node
 	End   *Node
-
-	logger *log.Logger
 }
 
-func NewProcessor(logger *log.Logger) *Processor {
+func NewProcessor() *Processor {
 	start := NewNode("", 1)
 	end := NewNode("", 1)
 
@@ -29,8 +33,6 @@ func NewProcessor(logger *log.Logger) *Processor {
 		Nodes: map[string]*Node{},
 		Start: start,
 		End:   end,
-
-		logger: logger,
 	}
 }
 
@@ -48,10 +50,10 @@ func NewNode(word string, weight int, neighbours ...*Node) *Node {
 	return newNode
 }
 
-func (p *Processor) AddMsg(msg string) {
+func (p *Processor) AddMsg(msg string) error {
 	tokens := strings.Fields(msg)
 	if len(tokens) == 0 {
-		p.logger.Printf("[processor] empty msg %q in Add", msg)
+		return fmt.Errorf("[processor] empty msg %q in Add: %w", msg, ErrEmptyMessage)
 	}
 
 	prevNode := p.Start
@@ -67,6 +69,8 @@ func (p *Processor) AddMsg(msg string) {
 
 	lastNode := p.Nodes[tokens[len(tokens)-1]]
 	lastNode.AddNeighbour(p.End)
+
+	return nil
 }
 
 func (p *Processor) GetOrCreateNode(token string) *Node {
@@ -85,23 +89,27 @@ func (n *Node) AddNeighbour(node *Node) {
 	}
 }
 
-func (p *Processor) Generate() string {
+func (p *Processor) Generate() (string, error) {
 	newMsg := strings.Builder{}
 	cur := p.Start
 
+	var err error
 	for cur != p.End {
-		cur = cur.chooseRandomNeighbour(p.logger)
+		cur, err = cur.chooseRandomNeighbour()
+		if err != nil {
+			return "", fmt.Errorf("[processor] failed to choose random neighbour: %w", err)
+		}
 		newMsg.WriteString(cur.Word)
 		newMsg.WriteString(" ")
 	}
 
 	res := newMsg.String()
-	return res[:len(res)-2]
+	return res[:len(res)-2], nil
 }
 
-func (n *Node) chooseRandomNeighbour(logger *log.Logger) *Node {
+func (n *Node) chooseRandomNeighbour() (*Node, error) {
 	if len(n.Neigbours) == 0 {
-		log.Fatalf("[node %v]: chooseRandomNeighbour 0 neighbours\n", n)
+		return nil, fmt.Errorf("[node %v]: 0 neighbours: %w", n, ErrNoNeighbours)
 	}
 
 	sumOfWeights := 0
@@ -112,13 +120,12 @@ func (n *Node) chooseRandomNeighbour(logger *log.Logger) *Node {
 	rnd := rand.Intn(sumOfWeights) //nolint:gosec
 	for _, neighbour := range n.Neigbours {
 		if rnd < neighbour.Weight {
-			return neighbour
+			return neighbour, nil
 		}
 		rnd -= neighbour.Weight
 	}
 
-	logger.Fatalf("[node %v]: chooseRandomNeighbour failed\n", n)
-	return nil
+	return nil, fmt.Errorf("[node %v]: failed to choose a neighbour: %w", n, ErrRandomWalkFail)
 }
 
 func (n *Node) String() string {
