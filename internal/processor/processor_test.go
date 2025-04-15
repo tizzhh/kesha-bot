@@ -165,7 +165,7 @@ func TestProcessor(t *testing.T) {
 			hiHowAreYou    = "hi, how are you?"
 
 			numberOfGenerations = 10_000
-			allowedDelta        = 2
+			allowedDelta        = 1
 		)
 
 		tCases := []struct {
@@ -192,8 +192,17 @@ func TestProcessor(t *testing.T) {
 				Name: "three messages",
 				Msgs: []string{helloHowAreYou, helloHowAreYou, hiHowAreYou},
 				ExpectedMsgPercentages: map[string]float64{
-					helloHowAreYou: 66,
-					hiHowAreYou:    33,
+					helloHowAreYou: float64(2) / 3 * 100,
+					hiHowAreYou:    float64(1) / 3 * 100,
+				},
+			},
+			{
+				Name: "message with cycles",
+				Msgs: []string{"a b c b a"},
+				ExpectedMsgPercentages: map[string]float64{
+					"a":         33.33,
+					"a b a":     15,
+					"a b c b a": 5,
 				},
 			},
 		}

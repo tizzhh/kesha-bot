@@ -129,5 +129,5 @@ func (n *Node) chooseRandomNeighbour() (*Node, error) {
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf("Node %q %d %v", n.Word, n.Weight, n.Neigbours)
+	return fmt.Sprintf("Node %q %d", n.Word, n.Weight)
 }
